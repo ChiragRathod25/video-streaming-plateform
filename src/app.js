@@ -21,5 +21,14 @@ app.use(express.urlencoded({
 app.use(express.static("public"))  //configuration to store public available files such as favicon,etc
  
 app.use(cookieParser()) //to manage cookie on user's browser
-// export {app}
-export default express
+
+
+
+//routes import
+import userRouter from  "./routes/user.routes.js"
+
+//routes declaration
+app.use("/api/v1/users",userRouter)  //https:localhost:8000/api/v1/users/register
+
+// export default express
+export {app}

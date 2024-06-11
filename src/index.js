@@ -4,8 +4,7 @@ config({ path: './env' });
 import mongoose  from "mongoose";
 import { DB_NAME } from "./constants.js";
 import connectDB from "./db/index.js";
-import { application } from 'express';
-
+import {app}  from './app.js';
 connectDB()
 .then(()=>{
     app.listen(process.env.PORT,()=>{
@@ -13,7 +12,7 @@ connectDB()
     })
 })
 .catch((err)=>{
-    console.log("MONGODB CONNECTION FAILED !!")
+    console.log("MONGODB CONNECTION FAILED !! \nError :",err)
 })
 
 
