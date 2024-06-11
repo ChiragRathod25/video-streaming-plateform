@@ -27,8 +27,14 @@ app.use(cookieParser()) //to manage cookie on user's browser
 //routes import
 import userRouter from  "./routes/user.routes.js"
 
+// app.get('/', function (req, res) {
+//   res.send('Hello World!')
+// })
+
 //routes declaration
 app.use("/api/v1/users",userRouter)  //https:localhost:8000/api/v1/users/register
+
+
 
 // export default express
 export {app}
