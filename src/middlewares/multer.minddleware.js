@@ -1,12 +1,13 @@
 import multer from "multer";
-
+import { User } from "../models/user.model.js";
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "./public/temp");
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix);
+    const {username}=req.body
+    const uniqueSuffix = Date.now() + "-"  ;
+    cb(null,username+file.originalname +"-"+ file.fieldname + "-" + uniqueSuffix);
     //   file.originalname - to save with original name
   },
 });
