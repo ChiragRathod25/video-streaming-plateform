@@ -12,15 +12,14 @@ const connectDB=async ()=>{
         // console.log(connectionInstance)
         
         //to listen error
-        app.on("error : ",()=>{
-            console.log("Error : ",error)
-            throw error;
+        app.on("error",()=>{
+            console.log("Error occurred: ",error)
+            throw error; 
          })
-
-
-        // app.listen(process.env.PORT,()=>{
-        //     console.log(`App is listening on port : ${process.env.PORT}`)
-        // })
+         const port = process.env.PORT || 8000;
+        app.listen(port,()=>{
+            console.log(`App is listening on port : ${port}`)
+        }) 
     }
     catch(error){
         console.log(`Error connection failed: `,error)
