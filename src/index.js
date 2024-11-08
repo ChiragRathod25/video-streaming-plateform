@@ -1,8 +1,3 @@
-import { config } from "dotenv";
-config({ path: "./env" });
-
-import mongoose from "mongoose";
-import { DB_NAME } from "./constants.js";
 import connectDB from "./db/index.js";
 import { app } from "./app.js";
 connectDB()
@@ -12,7 +7,7 @@ connectDB()
         console.log(`Server is running at port : ${process.env.PORT}`);
       });
     } catch (error) {
-      console.log(error);
+      console.log(`Error while starting the server : `,error);
     }
   })
 .catch((err) => {

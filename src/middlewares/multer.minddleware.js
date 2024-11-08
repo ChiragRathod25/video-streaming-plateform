@@ -1,5 +1,5 @@
 import multer from "multer";
-import { User } from "../models/user.model.js";
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "./public/temp");
