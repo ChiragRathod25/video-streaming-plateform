@@ -38,8 +38,11 @@ const registerUser = asyncHandler(async (req, res) => {
   const { fullname, email, username, password } = req.body;
 
   //check if field value is provided or not and it is not equals to ""
-  if ([fullname, email, username, password].some(
-      (field) => (field?.trim() ?? "") === "")) {
+  if (
+    [fullname, email, username, password].some(
+      (field) => (field?.trim() ?? "") === ""
+    )
+  ) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -224,4 +227,71 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  if (newPassword !== confirmPassword) {
+    throw new ApiError(401, `please enter valid new password`);
+  }
+  try {
+    const user = await User.findById(req.user?.id);
+    if (!user) {
+      throw new ApiError(401, `Invalid or expired refresh token`);
+    }
+    const passwordCheck = await user.isPasswordCorrect(currentPassword);
+    if (!passwordCheck) {
+      throw new ApiError(401, `Incorrect password`);
+    }
+
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+    res
+      .status(200)
+      .json(new ApiResponse(200, `Password updated successfully !!`));
+  } catch (error) {
+    throw new ApiError(
+      401,
+      `something went wrong while changing the password\n${error?.message}`
+    );
+  }
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, req.user, `Current user fetched successfully !!`)
+    );
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  if (!avatar) {
+    throw new ApiError(500, `Error while uploading file on cloudinary`);
+  }
+  const user = await User.findOneAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    {
+      new: true, //here by defining this we are telling the mongoDB to return updated document(user) to it
+    }
+  ).select("-password -refreshToken");
+  res
+    .status(200)
+    .json(new ApiResponse(200, user, `Avatar image updated successfully !!`));
+
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateUserAvatar
+};
