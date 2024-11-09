@@ -4,7 +4,10 @@ import {
   logoutUser,
   registerUser,
   changeCurrentPassword,
-  updateAvatarImage,
+  refreshAccessToken,
+  getCurrentUser,
+  updateUserAvatar,
+  updateAccountDetails
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.minddleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -32,9 +35,10 @@ router.route("/user-details").get(verifyJWT, getCurrentUser);
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/change-password").post(verifyJWT, changeCurrentPassword);
+router.route("/update-account").post(verifyJWT,updateAccountDetails);
 
 router
-  .route("/updateAvatarImage")
-  .post(verifyJWT, upload.single("avatar"), updateAvatarImage);
+  .route("/update-avatar")
+  .post(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
 export default router;

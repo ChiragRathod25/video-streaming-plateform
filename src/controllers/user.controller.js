@@ -283,9 +283,32 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, user, `Avatar image updated successfully !!`));
-
 });
 
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { email, fullname } = req.body;
+  if (!email || !fullname) {
+    throw new ApiError(401, `Email or fullname field is not there to update`);
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: [{ email }, { fullname }],
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+  if (!user) {
+    throw new ApiError(
+      401,
+      `something went wrong while updating the user details`
+    );
+  }
+  res
+    .status(200)
+    .json(new ApiResponse(200, user, `Account details updated successfully`));
+});
 export {
   registerUser,
   loginUser,
@@ -293,5 +316,6 @@ export {
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
-  updateUserAvatar
+  updateUserAvatar,
+  updateAccountDetails,
 };
