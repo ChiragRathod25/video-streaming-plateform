@@ -1,7 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteMediaOnCloudinary,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -266,8 +269,12 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  if (!avatar) {
+  if (!avatar || !avatar?.url) {
     throw new ApiError(500, `Error while uploading file on cloudinary`);
+  }
+  const deleteExistenceMedia = await deleteMediaOnCloudinary(avatar.url);
+  if (deleteExistenceMedia.result != "ok") {
+    throw new ApiError(400, `Error while deleting existing media`);
   }
   const user = await User.findOneAndUpdate(
     req.user?._id,
