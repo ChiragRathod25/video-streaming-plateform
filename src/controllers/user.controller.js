@@ -316,6 +316,73 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, `Account details updated successfully`));
 });
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  //get total subscriber, subscribed or not status
+  //basic details of the channel
+  const { username } = req.params;
+  if (!username.trim()) {
+    throw new ApiError(401, `username is missing`);
+  }
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.trim().toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: { $size: "$subscribers" },
+        channelsSubscribedToCount: { $size: "$subscribedTo" },
+        isSubscribed: {
+          $cond: {
+            //here how we got user into req.user ? , it should be only _id, check later
+            if: { $in: ["_id", "subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        username: 1,
+        fullname: 1,
+        avatar: 1,
+        coverImage: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        subscribersCount: 1,
+      },
+    },
+  ]);
+
+  console.log("channel respose:",channel);
+  console.log(`\ncheck $addField comment while debugging`);
+  
+  if(!channel?.length){
+    throw new ApiError(400,`Channel does not exist`)
+  }
+  res
+  .status(200)
+  .json(new ApiResponse(200,channel,`Channel details fetched successfully !!`))
+});
 export {
   registerUser,
   loginUser,
@@ -325,4 +392,5 @@ export {
   getCurrentUser,
   updateUserAvatar,
   updateAccountDetails,
+  getUserChannelProfile,
 };

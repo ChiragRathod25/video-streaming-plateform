@@ -35,12 +35,16 @@ const deleteMediaOnCloudinary = async (deleteMediaURL) => {
     const response = await cloudinary.uploader.destroy(publicId, {
       resource_type: "auto",
     });
+    
     if (!response) {
       throw new ApiError(
         401,
         `Error while deleting old image form storage server`
       );
     }
+    
+    console.log(`Delete media response from cloudinary : \n${response}`);
+    
     return response;
   } catch (error) {
     throw new ApiError(400, `something went wrong while deleting media`);
