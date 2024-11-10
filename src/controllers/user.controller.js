@@ -7,6 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateRefreshAndAccessToen = async (userId) => {
   try {
@@ -272,7 +273,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatar || !avatar?.url) {
     throw new ApiError(500, `Error while uploading file on cloudinary`);
   }
-  const deleteExistenceMedia = await deleteMediaOnCloudinary(avatar.url);
+  const deleteExistenceMedia = await deleteMediaOnCloudinary(req.user?.avatar);
   if (deleteExistenceMedia.result != "ok") {
     throw new ApiError(400, `Error while deleting existing media`);
   }
@@ -291,6 +292,33 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, `Avatar image updated successfully !!`));
 });
+
+const updatedUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file?.path;
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (!coverImage || !coverImage?.url) {
+    throw new ApiError(500, `Error while uploading file on cloudinary`);
+  }
+  const deleteExistenceMedia = await deleteMediaOnCloudinary(req.user?.coverImage);
+  if (deleteExistenceMedia.result != "ok") {
+    throw new ApiError(400, `Error while deleting existing media`);
+  }
+  const user = await User.findOneAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: coverImage.url,
+      },
+    },
+    {
+      new: true, 
+    }
+  ).select("-password -refreshToken");
+  res
+    .status(200)
+    .json(new ApiResponse(200, user, `cover image updated successfully !!`));
+});
+
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { email, fullname } = req.body;
@@ -383,6 +411,51 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   .status(200)
   .json(new ApiResponse(200,channel,`Channel details fetched successfully !!`))
 });
+const getWatchHistory=asyncHandler(async(req,res)=>{
+  const user=await User.aggregate([
+    {
+      $match:{
+        _id:new mongoose.Types.ObjectId(req.user._id)
+      }
+    },{
+      $lookup:{
+        from:"videos",
+        localField:"watchHistory", //check will it work for entire array of watch history
+        foreignField:"_id",
+        as:"watchHistory",
+        pipeline:[
+          {
+            $lookup:{
+              from:"users",
+              localField:"owner",
+              foreignField:"_id",
+              as:"owner",
+              pipeline:[
+                {
+                  $project:{
+                    username:1,
+                    fullname:1,
+                    avatar:1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields:{
+              owner:{
+                $first:"$owner"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ])
+  res
+  .status(200)
+  .json(new ApiResponse(200,user[0].watchHistory,`user watch history fetched sucessfully !!`))
+})
 export {
   registerUser,
   loginUser,
@@ -391,6 +464,8 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateUserAvatar,
+  updatedUserCoverImage,
   updateAccountDetails,
   getUserChannelProfile,
+  getWatchHistory
 };
