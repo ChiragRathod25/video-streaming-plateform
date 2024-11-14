@@ -11,7 +11,7 @@ const connectDB=async ()=>{
         console.log(`\nMongoDB connected !! DB HOST : ${connectionInstance.connection.host}`)
         // console.log(connectionInstance)
         
-        //to listen error on app
+        //to listen error on app 
         // app.on("error",()=>{
         //     console.log("Error occurred: ",error)
         //     throw error; 

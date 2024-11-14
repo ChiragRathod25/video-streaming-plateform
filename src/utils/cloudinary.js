@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs"; //for file system
-import { extractPublicId } from "cloudinary-build-url";
+// import { extractPublicId } from "cloudinary-build-url";
+import { ApiError } from "../utils/ApiError.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -30,8 +31,11 @@ const uploadOnCloudinary = async (uploadFilePath) => {
 
 const deleteMediaOnCloudinary = async (deleteMediaURL) => {
   try {
+    console.local(deleteMediaURL)
     if (!deleteMediaURL) return null;
     const publicId = await extractPublicId(deleteMediaURL);
+    console.log(publicId);
+    
     const response = await cloudinary.uploader.destroy(publicId, {
       resource_type: "auto",
     });
@@ -47,7 +51,7 @@ const deleteMediaOnCloudinary = async (deleteMediaURL) => {
     
     return response;
   } catch (error) {
-    throw new ApiError(400, `something went wrong while deleting media`);
+    throw new ApiError(400, `something went wrong while deleting media`,error);
   }
 };
 

@@ -5,9 +5,11 @@ const storage = multer.diskStorage({
     cb(null, "./public/temp");
   },
   filename: function (req, file, cb) {
-    const {username}=req.body
+    let {username}=req.body || req.user?.username
+    // console.log(req.user)
+    // console.log(username)
     const uniqueSuffix = Date.now() + "-"  ;
-    cb(null,username+file.originalname +"-"+ file.fieldname + "-" + uniqueSuffix);
+    cb(null,username+"_"+file.originalname +"-"+ file.fieldname + "-" + uniqueSuffix);
     //   file.originalname - to save with original name
   },
 });

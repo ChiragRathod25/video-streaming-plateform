@@ -58,10 +58,15 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User already exist with same username or email");
   }
 
-  //check for images
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  // console.log(req.files);
-  if (!avatarLocalPath) throw new ApiError(400, "Avatar is required ");
+  let avatarLocalPath;
+  try {
+    //check for images
+    avatarLocalPath = req.files?.avatar[0]?.path;
+    // console.log(req.files);
+    if (!avatarLocalPath) throw new ApiError(400, "Avatar is required ");
+  } catch (error) {
+    throw new ApiError(401, `avatar is required`);
+  }
 
   let coverImageLocalPath;
   if (
@@ -121,10 +126,18 @@ const loginUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(404, "User not exist");
   }
-  const isPasswordValid = await user.isPasswordCorrect(password);
+  try {
+    const isPasswordValid = await user.isPasswordCorrect(password);
 
-  if (!isPasswordValid) {
-    throw new ApiError(401, "Invalid user credentials");
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Invalid user credentials");
+    }
+  } catch (error) {
+    throw new ApiError(
+      401,
+      `password is missing or incorrect\nError while validating password`,
+      error
+    );
   }
 
   //generating tokens and de-structure it
@@ -185,6 +198,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
+  // console.log(req.cookies);
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
   if (!incomingRefreshToken) {
@@ -211,18 +225,19 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, newRefreshToken } = await generateRefreshAndAccessToen(
+    const { accessToken, refreshToken } = await generateRefreshAndAccessToen(
       user._id
     );
+    // console.log(accessToken,refreshToken);
 
     return res
       .status(200)
       .cookie("refreshToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
+          { accessToken, refreshToken },
           "Access Token refreshed"
         )
       );
@@ -241,8 +256,12 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     if (!user) {
       throw new ApiError(401, `Invalid or expired refresh token`);
     }
-    const passwordCheck = await user.isPasswordCorrect(currentPassword);
-    if (!passwordCheck) {
+    try {
+      const passwordCheck = await user.isPasswordCorrect(currentPassword);
+      if (!passwordCheck) {
+        throw new ApiError(401, `Incorrect password`);
+      }
+    } catch (error) {
       throw new ApiError(401, `Incorrect password`);
     }
 
@@ -269,14 +288,25 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
+  if (!avatarLocalPath) {
+    throw new ApiError(401, `Avatar file is required`);
+  }
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   if (!avatar || !avatar?.url) {
     throw new ApiError(500, `Error while uploading file on cloudinary`);
   }
-  const deleteExistenceMedia = await deleteMediaOnCloudinary(req.user?.avatar);
-  if (deleteExistenceMedia.result != "ok") {
-    throw new ApiError(400, `Error while deleting existing media`);
+  try {
+    const deleteExistenceMedia = await deleteMediaOnCloudinary(
+      req.user?.avatar
+    );
+
+    if (deleteExistenceMedia.result != "ok") {
+      throw new ApiError(400, `Error while deleting existing media`);
+    }
+  } catch (error) {
+    throw new ApiError(401, `deleting existing file error`, error);
   }
+
   const user = await User.findOneAndUpdate(
     req.user?._id,
     {
@@ -295,14 +325,27 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 const updatedUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
+  console.log(coverImageLocalPath);
+
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
   if (!coverImage || !coverImage?.url) {
     throw new ApiError(500, `Error while uploading file on cloudinary`);
   }
-  const deleteExistenceMedia = await deleteMediaOnCloudinary(req.user?.coverImage);
-  if (deleteExistenceMedia.result != "ok") {
-    throw new ApiError(400, `Error while deleting existing media`);
+
+  if (req.user?.coverImage !== "") {
+    try {
+      const deleteExistenceMedia = await deleteMediaOnCloudinary(
+        req.user?.coverImage
+      );
+      if (deleteExistenceMedia.result != "ok") {
+        throw new ApiError(400, `Error while deleting existing media`);
+      }
+    } catch (error) {
+      throw new ApiError(401, `Error while deleting existing media`, error);
+    }
   }
+
+  // console.log(req.user);
   const user = await User.findOneAndUpdate(
     req.user?._id,
     {
@@ -311,7 +354,7 @@ const updatedUserCoverImage = asyncHandler(async (req, res) => {
       },
     },
     {
-      new: true, 
+      new: true,
     }
   ).select("-password -refreshToken");
   res
@@ -319,16 +362,18 @@ const updatedUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, `cover image updated successfully !!`));
 });
 
-
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { email, fullname } = req.body;
-  if (!email || !fullname) {
+  if (!email && !fullname) {
     throw new ApiError(401, `Email or fullname field is not there to update`);
   }
+  if (email?.trim() === "" || fullname?.trim() === "")
+    throw new ApiError(401, `Invalid fullname or password`);
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      $set: [{ email }, { fullname }],
+      $set: { email, fullname },
     },
     {
       new: true,
@@ -401,61 +446,70 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log("channel respose:",channel);
+  console.log("channel respose:", channel);
   console.log(`\ncheck $addField comment while debugging`);
-  
-  if(!channel?.length){
-    throw new ApiError(400,`Channel does not exist`)
+
+  if (!channel?.length) {
+    throw new ApiError(400, `Channel does not exist`);
   }
   res
-  .status(200)
-  .json(new ApiResponse(200,channel,`Channel details fetched successfully !!`))
+    .status(200)
+    .json(
+      new ApiResponse(200, channel, `Channel details fetched successfully !!`)
+    );
 });
-const getWatchHistory=asyncHandler(async(req,res)=>{
-  const user=await User.aggregate([
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
     {
-      $match:{
-        _id:new mongoose.Types.ObjectId(req.user._id)
-      }
-    },{
-      $lookup:{
-        from:"videos",
-        localField:"watchHistory", //check will it work for entire array of watch history
-        foreignField:"_id",
-        as:"watchHistory",
-        pipeline:[
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory", //check will it work for entire array of watch history
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
           {
-            $lookup:{
-              from:"users",
-              localField:"owner",
-              foreignField:"_id",
-              as:"owner",
-              pipeline:[
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
                 {
-                  $project:{
-                    username:1,
-                    fullname:1,
-                    avatar:1
-                  }
-                }
-              ]
-            }
+                  $project: {
+                    username: 1,
+                    fullname: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
           },
           {
-            $addFields:{
-              owner:{
-                $first:"$owner"
-              }
-            }
-          }
-        ]
-      }
-    }
-  ])
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
   res
-  .status(200)
-  .json(new ApiResponse(200,user[0].watchHistory,`user watch history fetched sucessfully !!`))
-})
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        `user watch history fetched sucessfully !!`
+      )
+    );
+});
 export {
   registerUser,
   loginUser,
@@ -467,5 +521,5 @@ export {
   updatedUserCoverImage,
   updateAccountDetails,
   getUserChannelProfile,
-  getWatchHistory
+  getWatchHistory,
 };
