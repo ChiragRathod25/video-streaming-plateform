@@ -295,16 +295,27 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatar || !avatar?.url) {
     throw new ApiError(500, `Error while uploading file on cloudinary`);
   }
+  // console.log(`New Uploaded file: ${avatar?.url}`)
+
   try {
+    // to delete the existing media on Cloudinary
     const deleteExistenceMedia = await deleteMediaOnCloudinary(
       req.user?.avatar
     );
 
-    if (deleteExistenceMedia.result != "ok") {
-      throw new ApiError(400, `Error while deleting existing media`);
+    // Log the response from the delete operation
+    //console.log('Delete media response:', deleteExistenceMedia);
+
+    // Check if the delete operation was successful
+    if (deleteExistenceMedia.result !== "ok") {
+      throw new ApiError(400, "Error while deleting existing media");
     }
   } catch (error) {
-    throw new ApiError(401, `deleting existing file error`, error);
+    // Log the error for debugging purposes
+    console.error("Error during media deletion:", error);
+
+    // Throw a new ApiError with the original error message
+    throw new ApiError(401, "Deleting existing file error", error);
   }
 
   const user = await User.findOneAndUpdate(
@@ -325,7 +336,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 const updatedUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
-  console.log(coverImageLocalPath);
+ // console.log(coverImageLocalPath);
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
   if (!coverImage || !coverImage?.url) {
@@ -337,8 +348,8 @@ const updatedUserCoverImage = asyncHandler(async (req, res) => {
       const deleteExistenceMedia = await deleteMediaOnCloudinary(
         req.user?.coverImage
       );
-      if (deleteExistenceMedia.result != "ok") {
-        throw new ApiError(400, `Error while deleting existing media`);
+      if (deleteExistenceMedia.result !== 'ok') {
+        throw new ApiError(400, 'existing media deletion failed',error);
       }
     } catch (error) {
       throw new ApiError(401, `Error while deleting existing media`, error);
@@ -426,7 +437,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         isSubscribed: {
           $cond: {
             //here how we got user into req.user ? , it should be only _id, check later
-            if: { $in: ["_id", "subscribers.subscriber"] },
+            if: { $in: ["_id", "$subscribers.subscriber"] },
             then: true,
             else: false,
           },
@@ -458,6 +469,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       new ApiResponse(200, channel, `Channel details fetched successfully !!`)
     );
 });
+
 const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {

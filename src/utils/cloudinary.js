@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs"; //for file system
-// import { extractPublicId } from "cloudinary-build-url";
+import { extractPublicId } from "cloudinary-build-url";
 import { ApiError } from "../utils/ApiError.js";
 
 cloudinary.config({
@@ -31,28 +31,32 @@ const uploadOnCloudinary = async (uploadFilePath) => {
 
 const deleteMediaOnCloudinary = async (deleteMediaURL) => {
   try {
-    console.local(deleteMediaURL)
     if (!deleteMediaURL) return null;
-    const publicId = await extractPublicId(deleteMediaURL);
-    console.log(publicId);
-    
-    const response = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "auto",
-    });
-    
-    if (!response) {
+   
+      //console.log(`DeleteMediaURL:`, deleteMediaURL);
+
+      const publicId = extractPublicId(deleteMediaURL);
+
+     // console.log(`Extracted public id:`,publicId);
+
+      //cloudinary deletion
+    const response = await cloudinary.uploader.destroy(publicId);
+
+    //cloudinary deletion respose
+    //console.log(`Cloudinary deletion respose: `,response)
+
+    if (response.result!=="ok") {
       throw new ApiError(
-        401,
+        500,
         `Error while deleting old image form storage server`
       );
     }
-    
-    console.log(`Delete media response from cloudinary : \n${response}`);
-    
+
     return response;
   } catch (error) {
-    throw new ApiError(400, `something went wrong while deleting media`,error);
+    console.error(`Error during media deletion `,error)
+    throw new ApiError(400, `Media deletion error`, error);
   }
 };
 
-export { uploadOnCloudinary,deleteMediaOnCloudinary };
+export { uploadOnCloudinary, deleteMediaOnCloudinary };
