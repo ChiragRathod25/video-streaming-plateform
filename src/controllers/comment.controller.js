@@ -1,4 +1,4 @@
-import mongoose, { connect } from "mongoose";
+import mongoose from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -16,7 +16,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
   const myAggregaterespose = await Comment.aggregate([
     {
       $match: {
-        video: new mongoose.Types.ObjectId(VideoId),
+        video: ObjectId(VideoId),
       },
     },
     {
