@@ -41,7 +41,7 @@ const updateTweet=asyncHandler(async(req,res)=>{
     const {content}=req.body
     if(!tweetId || ObjectId.isValid(tweetId))
         throw new ApiError(404,`Invalid tweet request`)
-    if(!content)
+    if(!content || !content.trim())
         throw new ApiError(404,`Content is required to update`)
     
     const tweet=await Tweet.findById(ObjectId(tweetId))
