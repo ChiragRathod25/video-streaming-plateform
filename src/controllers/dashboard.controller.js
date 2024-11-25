@@ -9,6 +9,7 @@ const getChannelStats=asyncHandler(async(req,res)=>{
         //3DB call : get total likes count
         //4DB call : get total comments count
         //5DB call : get total tweets count
+        //make one stats object of all this info and return it
 })
 
 const getChannelVideos=asyncHandler(async(req,res)=>{
