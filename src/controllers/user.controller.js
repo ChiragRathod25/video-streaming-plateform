@@ -1,10 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/user.model.js";
+import { User } from "../models/user.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import {uploadOnCloudinary, deleteMediaOnCloudinary} from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose,{ObjectId} from "mongoose";
 
 const generateRefreshAndAccessToen = async (userId) => {
   try {
@@ -468,10 +468,17 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
+  
+  // console.log(typeof req.user?._id)
+  // console.log( req.user?._id)
+  // const userId=req.user?._id;
+  // console.log(userId);
+  // console.log(typeofuserId);
   const user = await User.aggregate([
     {
       $match: {
-        _id: ObjectId(req.user._id),
+        // _id: ObjectId(req.user._id),  // no need to convert it to ObjectId(), it was already type of ObjectId(), it is updated now
+        _id: req.user._id,
       },
     },
     {
