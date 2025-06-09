@@ -1,7 +1,7 @@
 import {sum, helper} from "./sum.js";
 
 test("properly adds two numbers", () => {
-  expect(sum(1, 2)).toBe(5);  // This test is intentionally incorrect to demonstrate failure
+  expect(sum(1, 2)).toBe(3);
   expect(sum(-1, 1)).toBe(0);
   expect(sum(-1, -1)).toBe(-2);
   expect(sum(0, 0)).toBe(0);
