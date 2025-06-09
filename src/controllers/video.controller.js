@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
+const { ObjectId } = mongoose.Types;
 
 const getAllVideos = asyncHandler(async (req, res) => {
   //TODO: get all videos based on query, sort, pagination
@@ -83,7 +85,8 @@ const publishVideo = asyncHandler(async (req, res) => {
     throw new ApiError(404, `title and descriptions are required`);
 
   //uploading videoFile
-  const videoLocalPath = req.files[0]?.path;
+
+  const videoLocalPath = req.files.videoFile[0].path;
   if (!videoLocalPath) throw new ApiError(404, `Video files is required`);
 
   const videoFile = await uploadOnCloudinary(videoLocalPath);
@@ -92,20 +95,20 @@ const publishVideo = asyncHandler(async (req, res) => {
 
   const duration = videoFile.duration;
 
-
   //uploading thumbnail
-  const thumbnailLocalPath = req.files[1]?.path;
+  const thumbnailLocalPath = req.files.thumbnail[0]?.path;
   if (!thumbnailLocalPath) throw new ApiError(404, `thumbnail is required`);
 
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
   if (!thumbnail || !thumbnail.url)
     throw new ApiError(`Error while uploading thumbnail on cloudinary`);
-  
+
   //creating video document
+  // console.log(typeof req.user?._id);
   const addVideo = await Video.create({
-    videoFile,
-    thumbnail,
-    owner: ObjectId(req.user?._id),
+    videoFile: videoFile.url,
+    thumbnail: thumbnail.url,
+    owner: req.user?._id,
     title,
     description,
     duration,
@@ -127,7 +130,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(404, `Invalid video request`);
 
   const video = await Video.findById({
-    _id: ObjectId(videoId),
+    _id: videoId,
   });
 
   if (!video) throw new ApiResponse(404, `Video not found`);
@@ -138,79 +141,121 @@ const getVideoById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, `Video fetched successfully !!`));
 });
 
-const updateVideoThumbnail=asyncHandler(async(req,res)=>{
-  const {videoId}=req.params
-  if(!videoId || !ObjectId.isValid(videoId))
-      throw new ApiError(404,`Invalid video request`)
+const updateVideoThumbnail = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!videoId || !ObjectId.isValid(videoId))
+    throw new ApiError(404, `Invalid video request`);
 
-  const thumbnailLocalPath=req.file?.path
-  const thumbnail=await uploadOnCloudinary(thumbnailLocalPath)
-  if(!thumbnail ||thumbnail.url)
-      throw new ApiError(404,`Error while updating thumbnail on cloudinary`)
-  const video=await Video.findByIdAndUpdate(
+  const thumbnailLocalPath = req.file?.path;
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+  // console.log(thumbnail);
+
+  if (!thumbnail || !thumbnail.url)
+    throw new ApiError(404, `Error while updating thumbnail on cloudinary`);
+  const video = await Video.findByIdAndUpdate(
     {
-      _id:ObjectId(videoId)
-    },{
-      thumbnail:thumbnail.url
+      _id: videoId,
+    },
+    {
+      thumbnail: thumbnail.url,
+    },
+    {
+      new: true,
     }
-  )
-  if(!video)
-      throw new ApiError(404,`Error while updating video thumbnail`)
+  );
+  // console.log(video);
+
+  if (!video) throw new ApiError(404, `Error while updating video thumbnail`);
   res
-  .status(200)
-  .json(new ApiResponse(200,video,`Video thumbnail updated successfully !!`))
-})
+    .status(200)
+    .json(
+      new ApiResponse(200, video, `Video thumbnail updated successfully !!`)
+    );
+});
+
 const updateVideoDetails = asyncHandler(async (req, res) => {
   //TODO: update video details like title, description
-  const {videoId}=req.params
-  if(!videoId || !ObjectId.isValid(videoId))
-      throw new ApiError(404,`Invalid video request`)
-  const {title,description}=req.body
-  if(!title && !description)
-      throw new ApiResponse(404,`title or descriptions are reuired to update`)
-  const video=await Video.findById(ObjectId(videoId))
-  if(!video)
-      throw new ApiError(404,`Video not found`)
-  if(title!="" && title.trim()!="" && title!=video.title)
-      video.title=title
-  if(description!="" && description.trim()!="" && description!=video.description)
-      video.description=description
-  video.save({validateBeforeSave:false})
- res
- .status(200)
- .json(new ApiResponse(404,video,`Video details updated successfully!!`)) 
+  const { videoId } = req.params;
+  if (!videoId || !ObjectId.isValid(videoId))
+    throw new ApiError(404, `Invalid video request`);
 
+  
+  const { title, description } = req.body;
+  if (!title && !description)
+    throw new ApiError(404, `title or descriptions are reuired to update`);
+
+  const video = await Video.findById(videoId);
+  if (!video) throw new ApiError(404, `Video not found`);
+
+  if (title && title.trim() != "" && title != video.title)
+    video.title = title;
+  if (
+    description &&
+    description.trim() != "" &&
+    description != video.description
+  )
+    video.description = description;
+
+  video.save({ validateBeforeSave: false });
+
+  res
+    .status(200)
+    .json(new ApiResponse(404, video, `Video details updated successfully!!`));
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
   //TODO: delete video
-  const {videoId}=req.params
-  if(!videoId || !ObjectId.isValid(videoId))
-      throw new ApiError(404,`Invalid video request`)
-  const response=await Video.findByIdAndDelete(ObjectId(videoId))
+  const { videoId } = req.params;
+  if (!videoId || !ObjectId.isValid(videoId))
+    throw new ApiError(404, `Invalid video request`);
+  const response = await Video.findByIdAndDelete(videoId);
+
+  if (!response) throw new ApiError(404, `Error while deleting the video`);
+  // console.log(response) //entire deleted video object
+
   res
-  .status(200)
-  .json(new ApiResponse(200,null,`Video deleted successfully !!`))
+    .status(200)
+    .json(new ApiResponse(200, null, `Video deleted successfully !!`));
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
-  const {videoId}=req.params
-  if(!videoId || !ObjectId.isValid(videoId))
-      throw new ApiError(404,`Invalid video request`)
-  const toggleVideoPublishStatus=await Video.findOneAndUpdate(
+  const { videoId } = req.params;
+  if (!videoId || !ObjectId.isValid(videoId))
+    throw new ApiError(404, `Invalid video request`);
+  const toggleVideoPublishStatus = await Video.findOneAndUpdate(
     {
-      _id:ObjectId(videoId)
+      _id: videoId,
     },
-    {
-      isPublished:{
-        $cond:{if:isPublished, then:false,else:true}
-      }
-    }
-  )
+    [
+      {
+        $set: {
+          // isPublished: {
+          //   $cond: { if: "$isPublished", then: false, else: true },
+          // },
+          isPublished: { $not: "$isPublished" },
+        },
+      },
+    ],
+    { new: true }
+  );
   res
-  .status(200)
-  .json(new ApiResponse(200,togglePublishStatus,`video's publish status toggled successfully !!`))
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        toggleVideoPublishStatus,
+        `video's publish status toggled successfully !!`
+      )
+    );
 });
 
 //TODO: Stream video as user is playing it, to reduce the bandwidth => getVideoById
-export { getAllVideos,publishVideo,getVideoById,updateVideoThumbnail,updateVideoDetails,deleteVideo,togglePublishStatus };
+export {
+  getAllVideos,
+  publishVideo,
+  getVideoById,
+  updateVideoThumbnail,
+  updateVideoDetails,
+  deleteVideo,
+  togglePublishStatus,
+};
