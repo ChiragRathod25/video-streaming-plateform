@@ -1,0 +1,51 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Intigration  #name of the workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x] # specify the versions of node to run the workflow against
+
+    steps:
+    - uses: actions/checkout@v4  # it tells github to checkout the current branch (here feature branch) so that the workflow can access the code
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4  # set up Node.js environment before running the workflow
+      with:
+        node-version: ${{ matrix.node-version }}  # run the workflow for each version of node specified in the matrix
+        cache: 'npm'  #we are using npm as the package manager, so we will cache npm dependencies
+    - name: Installing dependencies
+      run: npm i
+      
+
+  unit-test:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x] # specify the versions of node to run the workflow against
+
+    steps:
+    - uses: actions/checkout@v4  
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4 
+      with:
+        node-version: ${{ matrix.node-version }}  
+        cache: 'npm'  
+    - name: Installing dependencies
+      run: npm i    
+
+    - name: Run unit tests
+      run: npm run test  # run the unit tests using the npm script defined in package.json
