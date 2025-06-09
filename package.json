@@ -1,5 +1,5 @@
 {
-  "name": "vidnest-backend",
+  "name": "videonest-backend",
   "version": "1.0.0",
   "description": "a full-featured backend for video streaming using Node.js, MongoDB, and AWS, supporting upload, transcoding, and video delivery.",
   "type": "module",
@@ -7,7 +7,7 @@
  "scripts": {
   "start": "node src/index.js",
   "dev": "nodemon src/index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+  "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "keywords": [
     "javascript",
@@ -23,7 +23,6 @@
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.2.0",
-    "cloudinary-build-url": "^0.2.4",
     "cloudinary-build-url": "^0.2.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
